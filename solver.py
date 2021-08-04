@@ -4,6 +4,19 @@ import copy
 g = ImageScrambleGame(gsize=3)
 print("\nStart state: ", g.get_state(), "\n")
 
+#node class to help bundle some things together for the A* search methods
+class node():
+        def __init__(self, g=None, history=[]):
+                self.g = g
+                self.history = history
+                self.distOut = len(history)
+                self.hDist = h_dist(g)
+                self.totalDist = self.distOut + self.hDist
+        def update(self):
+                self.distOut = len(self.history)
+                self.hDist = h_dist(g)
+                self.totalDist = self.distOut + h_dist(self.g)
+
 # state to a line: should review list comprehensions
 def state_to_line(state):
         res = []
@@ -37,55 +50,42 @@ def legal_moves(g):
         if p < (g.gsize*(g.gsize-1))-1: goods.append(2) #can move down
         return goods
 
-#node class to help bundle some things together for the A* search methods
-class node():
-        def __init__(self, g=None, history=[]):
-                self.g = g
-                self.history = history
-                self.distOut = len(history)
-                self.hDist = h_dist(g)
-                self.totalDist = self.distOut + self.hDist
-        def update(self):
-                self.distOut = len(self.history)
-                self.hDist = h_dist(g)
-                self.totalDist = self.distOut + h_dist(self.g)
-
-start = node(g)
-queue = [start]
-seen = set()
-seen.add(hash(str(start.g.get_state()))) 
-#A set prevents us from re-evaulating already seen states, such as making then un-making the same moves
-
-
 #dumb queue insertion
 #should definitely make this better for runtime's sake
-def inPoint(e):
-        for c,g in enumerate(queue):
+def inPoint(e, q):
+        for c,g in enumerate(q):
                 if g.totalDist > e.totalDist:
                         return c
         return -1
 
 #main A*
+#A set prevents us from re-evaulating already seen states, such as making then un-making the same move
+def solve(g):
 
-t = 1
-while queue:
-        if t % 1000 == 0:
-                print("tested", t, "solutions")
-        cur = queue[0]
-        queue.remove(cur)
-        dist = h_dist(cur.g)
-        if dist == 0:
-                print("Solution found!")
-                print("\n", cur.history)
-                break
-        steps = legal_moves(cur.g)
-        for s in steps:
-                new = copy.deepcopy(cur)
-                new.g = copy.deepcopy(cur.g) #this might be overkill but it definitely works this way 
-                new.g.move_blank(s)
-                new.update()
-                if hash(str(new.g.get_state())) not in seen:
-                        new.history.append(s)
-                        queue.insert(inPoint(new), new)
-                        t += 1
-                        seen.add(hash(str(new.g.get_state()))) 
+        start = node(g)
+        queue = [start]
+        seen = set()
+        seen.add(hash(str(start.g.get_state()))) 
+
+        t = 1
+        while queue:
+                if t % 1000 == 0:
+                        print("tested", t, "solutions")
+                cur = queue[0]
+                queue.remove(cur)
+                dist = h_dist(cur.g)
+                if dist == 0:
+                        #print("Solution found!")
+                        print("\n", cur.history)
+                        return
+                steps = legal_moves(cur.g)
+                for s in steps:
+                        new = copy.deepcopy(cur)
+                        new.g = copy.deepcopy(cur.g) #this might be overkill but it definitely works this way 
+                        new.g.move_blank(s)
+                        new.update()
+                        if hash(str(new.g.get_state())) not in seen:
+                                new.history.append(s)
+                                queue.insert(inPoint(new, queue), new)
+                                t += 1
+                                seen.add(hash(str(new.g.get_state()))) 
